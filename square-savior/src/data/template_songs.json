@@ -1,0 +1,16 @@
+[
+    {
+        "title": "Titre de la chanson",
+        "artist": "Nom de l'artiste",
+        "year": 2026,
+        "youtubeId": "VIDEO_ID_ICI",
+        "startTime": 0
+    },
+    {
+        "title": "Exemple: Die With A Smile",
+        "artist": "Lady Gaga",
+        "year": 2025,
+        "youtubeId": "P7Y3W760U7k",
+        "startTime": 54
+    }
+]
