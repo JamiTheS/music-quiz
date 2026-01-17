@@ -89,31 +89,7 @@ const Game = ({ onEndGame }) => {
         }
     }, [currentSongs, autoPlayIndex, isRevealPhase, isTransitioning, playingId]);
 
-    // Progress timer
-    useEffect(() => {
-        if (playingId && isRevealPhase) {
-            progressIntervalRef.current = setInterval(() => {
-                setPlayProgress(prev => {
-                    if (prev >= 10) {
-                        return 10;
-                    }
-                    return prev + 0.1;
-                });
-            }, 100);
-        } else {
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-            }
-        }
-
-        return () => {
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-            }
-        };
-    }, [playingId, isRevealPhase]);
-
-    // Move to next song after current one finishes
+    // Move to next song after current one finishes (defined first so it can be used in effects)
     const moveToNextSong = useCallback(() => {
         const currentSong = currentSongs[autoPlayIndex];
 
@@ -142,6 +118,45 @@ const Game = ({ onEndGame }) => {
             setPlayProgress(0);
         }
     }, [autoPlayIndex, currentSongs, revealedSongs, artworkCache]);
+
+    // Progress timer with auto-advance fallback
+    const progressFallbackRef = useRef(false);
+
+    useEffect(() => {
+        // Reset fallback flag when playing a new song
+        progressFallbackRef.current = false;
+    }, [playingId]);
+
+    useEffect(() => {
+        if (playingId && isRevealPhase) {
+            progressIntervalRef.current = setInterval(() => {
+                setPlayProgress(prev => {
+                    // Fallback: if progress reaches 10 seconds, trigger moveToNextSong
+                    // This ensures we always advance even if audio events don't fire
+                    if (prev >= 10) {
+                        if (!progressFallbackRef.current) {
+                            progressFallbackRef.current = true;
+                            console.log('⏱️ Progress fallback: 10s reached, moving to next song');
+                            // Schedule the move on next tick to avoid state update conflicts
+                            setTimeout(() => moveToNextSong(), 0);
+                        }
+                        return 10;
+                    }
+                    return prev + 0.1;
+                });
+            }, 100);
+        } else {
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+            }
+        }
+
+        return () => {
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+            }
+        };
+    }, [playingId, isRevealPhase, moveToNextSong]);
 
     // Auto-hide notification
     useEffect(() => {

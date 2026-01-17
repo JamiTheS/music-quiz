@@ -118,6 +118,42 @@ const AudioPlayer = forwardRef(({ song, isPlaying, onEnded, onError, onReady, on
     const isCurrentlyPlayingRef = useRef(false);
     const currentPreviewUrlRef = useRef(null);
 
+    // Separate effect for the 10-second auto-advance timer
+    // This ensures the timer always runs regardless of audio loading state
+    useEffect(() => {
+        if (isPlaying && previewUrl) {
+            // Clear any existing timeout
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+
+            // Set timeout to stop after 10 seconds
+            console.log('⏱️ Starting 10-second timer');
+            timeoutRef.current = setTimeout(() => {
+                console.log('⏱️ 10 seconds elapsed, moving to next song');
+                isCurrentlyPlayingRef.current = false;
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                }
+                if (onEnded) onEnded();
+            }, 10000);
+        } else {
+            // Clear timeout when not playing
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        }
+
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        };
+    }, [isPlaying, previewUrl, onEnded]);
+
+    // Separate effect for handling audio playback
     useEffect(() => {
         // Track if previewUrl changed
         const previewUrlChanged = currentPreviewUrlRef.current !== previewUrl;
@@ -138,17 +174,6 @@ const AudioPlayer = forwardRef(({ song, isPlaying, onEnded, onError, onReady, on
                         isCurrentlyPlayingRef.current = false;
                     }
                 });
-
-                // Set timeout to stop after 10 seconds
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => {
-                    console.log('⏱️ 10 seconds elapsed, stopping playback');
-                    isCurrentlyPlayingRef.current = false;
-                    if (audioRef.current) {
-                        audioRef.current.pause();
-                    }
-                    if (onEnded) onEnded();
-                }, 10000);
             }
         } else {
             // Pause if not playing
@@ -157,19 +182,8 @@ const AudioPlayer = forwardRef(({ song, isPlaying, onEnded, onError, onReady, on
                 console.log('⏸️ Playback paused');
                 isCurrentlyPlayingRef.current = false;
             }
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
-            }
         }
-
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
-            }
-        };
-    }, [isPlaying, previewUrl, attemptPlay, onEnded]);
+    }, [isPlaying, previewUrl, attemptPlay]);
 
     // Cleanup on unmount
     useEffect(() => {
